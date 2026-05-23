@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ADSN — Personality Research Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;900&family=Noto+Sans+Gujarati:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg-dark: #1a0f00;
+  --cream: #faf6ef;
+  --cream-dark: #f0e8d8;
+  --gold: #c8860a;
+  --gold-light: #f0a832;
+  --gold-gradient: linear-gradient(135deg, #c8860a, #f0a832, #c8860a);
+  --amber: #d4930f;
+  --warm-brown: #6b3d0f;
+  --card-bg: #ffffff;
+  --border: #e8dcc8;
+  --text-dark: #1a0f00;
+  --text-mid: #5c4020;
+  --text-light: #9a7850;
+  --shadow: 0 8px 40px rgba(26,15,0,0.12);
+  --shadow-lg: 0 20px 60px rgba(26,15,0,0.18);
+  --radius: 20px;
+  --radius-sm: 12px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--text-dark); min-height: 100vh; overflow-x: hidden; }
+
+.hero {
+  background: linear-gradient(160deg, #1a0f00 0%, #2d1800 40%, #1a0800 100%);
+  padding: 48px 24px 36px; position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; top: -60px; right: -60px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(200,134,10,0.18) 0%, transparent 70%);
+}
+.hero::after {
+  content: ''; position: absolute; bottom: -40px; left: -40px;
+  width: 180px; height: 180px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,168,50,0.10) 0%, transparent 70%);
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(200,134,10,0.18); border: 1px solid rgba(200,134,10,0.35);
+  color: var(--gold-light); font-size: 11px; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 6px 14px; border-radius: 100px; margin-bottom: 16px;
+}
+.hero-title { font-family: 'Playfair Display', serif; color: #fff; font-size: 32px; font-weight: 900; line-height: 1.15; margin-bottom: 8px; }
+.hero-title span { background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.hero-subtitle { font-family: 'Noto Sans Gujarati', sans-serif; color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1.6; }
+
+.progress-wrap { background: linear-gradient(160deg, #1a0f00, #2d1800); padding: 0 24px 24px; }
+.progress-pills { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.progress-pills::-webkit-scrollbar { display: none; }
+.pill { flex: 1; min-width: 36px; height: 5px; border-radius: 100px; background: rgba(255,255,255,0.12); transition: background 0.4s ease; }
+.pill.active { background: var(--gold-light); }
+.pill.done { background: rgba(200,134,10,0.5); }
+
+.main { background: var(--cream); min-height: calc(100vh - 180px); padding: 0 16px 120px; }
+
+.step-card {
+  background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  border: 1px solid var(--border); padding: 28px 22px; margin-top: 20px;
+  animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.step-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--gold); margin-bottom: 6px; }
+.step-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
+.step-title-gu { font-family: 'Noto Sans Gujarati', sans-serif; font-size: 16px; color: var(--text-mid); margin-bottom: 20px; }
+.divider { height: 1px; background: linear-gradient(90deg, var(--gold), transparent); margin: 18px 0; opacity: 0.3; }
+
+.field-group { margin-bottom: 20px; }
+.field-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.5px; color: var(--text-mid); text-transform: uppercase; margin-bottom: 8px; }
+.field-q-gu { font-family: 'Noto Sans Gujarati', sans-serif; font-size: 15px; font-weight: 600; color: var(--text-dark); line-height: 1.5; margin-bottom: 4px; display: block; }
+.field-q-en { font-size: 12px; color: var(--text-light); margin-bottom: 10px; display: block; font-style: italic; }
+
+input[type="text"], input[type="email"], input[type="tel"], input[type="password"], textarea, select {
+  width: 100%; background: var(--cream); border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+  font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--text-dark);
+  outline: none; transition: border 0.2s, box-shadow 0.2s; -webkit-appearance: none;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,134,10,0.12); background: #fff; }
+textarea { min-height: 96px; resize: none; overflow: hidden; line-height: 1.6; }
+
+.mcq-options { display: flex; flex-direction: column; gap: 10px; }
+.mcq-option {
+  display: flex; align-items: center; gap: 12px; background: var(--cream);
+  border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 14px 16px; cursor: pointer; transition: all 0.2s ease;
+}
+.mcq-option:active { transform: scale(0.98); }
+.mcq-option.selected { border-color: var(--gold); background: linear-gradient(135deg,#fffaf2,#fff8ea); box-shadow: 0 0 0 3px rgba(200,134,10,0.1); }
+.mcq-option input[type="radio"] { display: none; }
+.mcq-dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+.mcq-option.selected .mcq-dot { border-color: var(--gold); background: var(--gold-gradient); }
+.mcq-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #fff; opacity: 0; transition: opacity 0.2s; }
+.mcq-option.selected .mcq-dot::after { opacity: 1; }
+.mcq-text { font-size: 14px; color: var(--text-dark); flex: 1; line-height: 1.4; }
+
+.bottom-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, #fff 80%, transparent);
+  padding: 16px 16px 28px; display: flex; gap: 10px; z-index: 100;
+}
+.btn-primary {
+  flex: 1; background: var(--gold-gradient); color: #fff; border: none;
+  border-radius: 100px; padding: 16px 24px; font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 6px 24px rgba(200,134,10,0.35); transition: all 0.2s; letter-spacing: 0.3px;
+}
+.btn-primary:active { transform: scale(0.97); }
+.btn-secondary {
+  background: var(--cream); color: var(--text-mid); border: 1.5px solid var(--border);
+  border-radius: 100px; padding: 16px 20px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s;
+}
+
+.toast {
+  position: fixed; top: 20px; left: 50%;
+  transform: translateX(-50%) translateY(-80px);
+  background: var(--text-dark); color: #fff; padding: 12px 22px;
+  border-radius: 100px; font-size: 13px; font-weight: 500;
+  z-index: 9999; transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
+  white-space: nowrap; max-width: 90vw; text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: #1a6e2e; }
+.toast.error { background: #8b1a1a; }
+
+.success-screen { display: none; text-align: center; padding: 60px 24px; animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1); }
+.success-icon { width: 80px; height: 80px; background: var(--gold-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; font-size: 36px; box-shadow: 0 12px 40px rgba(200,134,10,0.35); }
+.success-title { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; color: var(--text-dark); margin-bottom: 10px; }
+.success-sub { font-family: 'Noto Sans Gujarati', sans-serif; font-size: 15px; color: var(--text-mid); line-height: 1.7; }
+
+.loader-overlay { display: none; position: fixed; inset: 0; background: rgba(26,15,0,0.6); z-index: 9998; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+.loader-overlay.show { display: flex; }
+.loader-box { background: #fff; border-radius: var(--radius); padding: 32px 40px; text-align: center; }
+.spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 14px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader-text { font-size: 14px; color: var(--text-mid); font-weight: 500; }
+
+#adminPanel { display: none; }
+.admin-header { background: linear-gradient(160deg,#1a0f00 0%,#2d1800 100%); padding: 40px 20px 24px; position: relative; overflow: hidden; }
+.admin-header::before { content: ''; position: absolute; top: -60px; right: -60px; width: 200px; height: 200px; border-radius: 50%; background: radial-gradient(circle, rgba(200,134,10,0.2) 0%, transparent 70%); }
+.admin-title { font-family: 'Playfair Display', serif; color: #fff; font-size: 24px; font-weight: 700; }
+.admin-title span { background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.admin-subtitle { color: rgba(255,255,255,0.5); font-size: 13px; margin-top: 4px; }
+.admin-body { padding: 16px; background: var(--cream); min-height: 100vh; }
+
+.kpi-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+.kpi-card { background: #fff; border-radius: var(--radius-sm); padding: 18px 16px; border: 1px solid var(--border); box-shadow: var(--shadow); }
+.kpi-label { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-light); margin-bottom: 6px; }
+.kpi-value { font-family: 'Playfair Display', serif; font-size: 30px; font-weight: 700; color: var(--text-dark); }
+.kpi-value.gold { background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+.search-bar { background: #fff; border-radius: var(--radius-sm); border: 1.5px solid var(--border); padding: 12px 16px; width: 100%; font-size: 14px; margin-bottom: 16px; outline: none; font-family: 'DM Sans', sans-serif; }
+.search-bar:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(200,134,10,0.1); }
+
+.section-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: var(--text-dark); margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; }
+
+.response-card { background: #fff; border-radius: var(--radius-sm); border: 1px solid var(--border); padding: 16px; margin-bottom: 10px; box-shadow: 0 2px 12px rgba(26,15,0,0.06); }
+.response-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.response-name { font-weight: 700; font-size: 15px; color: var(--text-dark); }
+.response-meta { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+.response-badge { font-size: 10px; font-weight: 600; padding: 3px 10px; border-radius: 100px; background: linear-gradient(135deg,rgba(200,134,10,0.15),rgba(240,168,50,0.1)); color: var(--gold); border: 1px solid rgba(200,134,10,0.25); text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.delete-btn { background: #fff0f0; color: #c0392b; border: 1px solid #f5c6c6; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+
+.chart-card { background: #fff; border-radius: var(--radius-sm); border: 1px solid var(--border); padding: 18px 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
+.chart-title { font-size: 13px; font-weight: 600; color: var(--text-mid); margin-bottom: 14px; line-height: 1.4; }
+
+.csv-btn { width: 100%; background: var(--gold-gradient); color: #fff; border: none; border-radius: 100px; padding: 15px 24px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 6px 24px rgba(200,134,10,0.3); margin-bottom: 20px; transition: all 0.2s; }
+.csv-btn:active { transform: scale(0.97); }
+.logout-btn { width: 100%; background: var(--cream); color: var(--text-mid); border: 1.5px solid var(--border); border-radius: 100px; padding: 14px 24px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 40px; }
+
+#adminLogin { display: none; min-height: 100vh; background: linear-gradient(160deg,#1a0f00 0%,#2d1800 100%); align-items: center; justify-content: center; padding: 24px; }
+.login-card { background: #fff; border-radius: var(--radius); padding: 36px 28px; width: 100%; max-width: 360px; box-shadow: var(--shadow-lg); animation: slideUp 0.4s cubic-bezier(0.16,1,0.3,1); }
+.login-logo { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 900; text-align: center; margin-bottom: 6px; }
+.login-logo span { background: var(--gold-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.login-sub { text-align: center; font-size: 13px; color: var(--text-light); margin-bottom: 28px; }
+.login-label { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--text-mid); text-transform: uppercase; margin-bottom: 8px; }
+
+.admin-tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; scrollbar-width: none; }
+.admin-tabs::-webkit-scrollbar { display: none; }
+.tab-btn { flex-shrink: 0; padding: 8px 16px; border-radius: 100px; border: 1.5px solid var(--border); background: #fff; font-size: 12px; font-weight: 600; color: var(--text-mid); cursor: pointer; transition: all 0.2s; font-family: 'DM Sans', sans-serif; }
+.tab-btn.active { background: var(--gold-gradient); border-color: transparent; color: #fff; box-shadow: 0 4px 14px rgba(200,134,10,0.3); }
+
+.admin-trigger { position: fixed; bottom: 20px; right: 20px; width: 44px; height: 44px; border-radius: 50%; background: var(--gold-gradient); border: none; cursor: pointer; opacity: 0.15; z-index: 200; font-size: 18px; transition: opacity 0.3s; box-shadow: 0 4px 16px rgba(200,134,10,0.4); }
+.admin-trigger:hover { opacity: 0.7; }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); font-size: 14px; }
+
+/* Full Database Table */
+.db-table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); background: #fff; box-shadow: var(--shadow); margin-bottom: 20px; }
+.db-table { border-collapse: collapse; width: 100%; min-width: 1400px; font-size: 12px; }
+.db-table thead { background: linear-gradient(135deg, #1a0f00, #2d1800); position: sticky; top: 0; z-index: 10; }
+.db-table thead th {
+  padding: 12px 14px; text-align: left; font-size: 10px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--gold-light);
+  white-space: nowrap; border-right: 1px solid rgba(255,255,255,0.08);
+}
+.db-table thead th:last-child { border-right: none; }
+.db-table tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+.db-table tbody tr:last-child { border-bottom: none; }
+.db-table tbody tr:hover { background: #fffaf2; }
+.db-table tbody tr:nth-child(even) { background: #fdf9f3; }
+.db-table tbody tr:nth-child(even):hover { background: #fffaf2; }
+.db-table td { padding: 10px 14px; vertical-align: top; color: var(--text-dark); border-right: 1px solid var(--border); max-width: 200px; }
+.db-table td:last-child { border-right: none; }
+.db-table td.cell-wrap { white-space: normal; word-break: break-word; line-height: 1.4; }
+.db-table td.cell-nowrap { white-space: nowrap; }
+.db-table td.cell-mcq { font-weight: 700; color: var(--gold); text-align: center; }
+.db-table .row-num { font-size: 10px; color: var(--text-light); font-weight: 600; text-align: center; background: var(--cream); }
+.db-table .del-cell { text-align: center; }
+.db-table .del-cell button { background: #fff0f0; color: #c0392b; border: 1px solid #f5c6c6; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; white-space: nowrap; }
+.db-table-empty { text-align: center; padding: 48px 20px; color: var(--text-light); font-size: 14px; }
+.db-count-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: var(--cream); border-bottom: 1px solid var(--border); font-size: 12px; color: var(--text-mid); font-weight: 500; flex-wrap: wrap; gap: 8px; }
+.db-count-bar strong { color: var(--gold); }
+
+@media (min-width: 480px) {
+  .hero { padding: 56px 32px 40px; }
+  .main { padding: 0 24px 120px; }
+  .step-card { padding: 32px 28px; }
+  .kpi-grid { grid-template-columns: repeat(4,1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="loader-overlay" id="loader"><div class="loader-box"><div class="spinner"></div><div class="loader-text">Please wait…</div></div></div>
+<div class="toast" id="toast"></div>
+<button class="admin-trigger" id="adminTrigger" onclick="showAdminLogin()" title="Admin">⚙</button>
+
+<!-- FORM APP -->
+<div id="formApp">
+  <div class="hero">
+    <div class="hero-badge">✦ ADSN Research 2026</div>
+    <h1 class="hero-title">Personality <span>Discovery</span><br>Form</h1>
+    <p class="hero-subtitle">વ્યક્તિત્વ સંશોધન ફોર્મ — ADSN</p>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-pills" id="progressPills">
+      <div class="pill active"></div><div class="pill"></div><div class="pill"></div>
+      <div class="pill"></div><div class="pill"></div><div class="pill"></div>
+    </div>
+  </div>
+
+  <div class="main" id="mainArea">
+    <div class="success-screen" id="successScreen">
+      <div class="success-icon">🎉</div>
+      <div class="success-title">Submitted Successfully!</div>
+      <p class="success-sub">તમારો ફોર્મ સફળતાપૂર્વક submit થઈ ગયો!<br><br>Thank you for being part of ADSN Personality Research 2026.</p>
+    </div>
+
+    <!-- STEP 1 -->
+    <div class="step-card" id="step1">
+      <div class="step-label">Step 1 of 6</div>
+      <h2 class="step-title">Personal Information</h2>
+      <p class="step-title-gu">વ્યક્તિગત માહિતી</p>
+      <div class="divider"></div>
+      <div class="field-group"><label class="field-label">Full Name / પૂરું નામ *</label><input type="text" id="f_name" placeholder="Your full name" /></div>
+      <div class="field-group"><label class="field-label">Email Address *</label><input type="email" id="f_email" placeholder="your@email.com" /></div>
+      <div class="field-group"><label class="field-label">Mobile Number / મોબાઈલ *</label><input type="tel" id="f_mobile" placeholder="+91 XXXXX XXXXX" /></div>
+      <div class="field-group"><label class="field-label">Course / અભ્યાસક્રમ *</label><input type="text" id="f_course" placeholder="e.g. BCA, B.Com, B.Tech…" /></div>
+      <div class="field-group"><label class="field-label">Semester / સેમેસ્ટર *</label>
+        <select id="f_semester"><option value="">Select Semester</option><option>Sem 1</option><option>Sem 2</option><option>Sem 3</option><option>Sem 4</option><option>Sem 5</option><option>Sem 6</option><option>Sem 7</option><option>Sem 8</option></select>
+      </div>
+      <div class="field-group"><label class="field-label">College Name / કૉલેજ *</label><input type="text" id="f_college" placeholder="College name" /></div>
+      <div class="field-group"><label class="field-label">Hobbies / શોખ</label><input type="text" id="f_hobbies" placeholder="Reading, Cricket, Music…" /></div>
+    </div>
+
+    <!-- STEP 2 -->
+    <div class="step-card" id="step2" style="display:none">
+      <div class="step-label">Step 2 of 6</div>
+      <h2 class="step-title">Skills & Purpose</h2>
+      <p class="step-title-gu">કૌશલ્ય અને હેતુ</p>
+      <div class="divider"></div>
+      <div class="field-group">
+        <span class="field-q-gu">Q1. તમારું 'I can do this all day' skill શું છે?</span>
+        <span class="field-q-en">What is your "I can do this all day" skill?</span>
+        <textarea id="q1" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q2. ADSN માં જોડાવા પાછળ નો મુખ્ય હેતુ અથવા કારણ?</span>
+        <span class="field-q-en">What is your main reason for joining ADSN?</span>
+        <textarea id="q2" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q3. તમારા જીવન ના આદર્શ (રોલ મોડલ) કોણ છે અને કેમ?</span>
+        <span class="field-q-en">Who is your role model in life and why?</span>
+        <textarea id="q3" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+    </div>
+
+    <!-- STEP 3 -->
+    <div class="step-card" id="step3" style="display:none">
+      <div class="step-label">Step 3 of 6</div>
+      <h2 class="step-title">Travel & Habits</h2>
+      <p class="step-title-gu">પ્રવાસ અને આદતો</p>
+      <div class="divider"></div>
+      <div class="field-group">
+        <span class="field-q-gu">Q4. તમારું favorite travel destination કયું?</span>
+        <span class="field-q-en">What is your favorite travel destination?</span>
+        <textarea id="q4" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q5. 'કયા trip માં memories camera કરતાં દિલમાં વધારે capture થઈ?' એ ટ્રિપ કઈ જગ્યા ની હતી?</span>
+        <span class="field-q-en">Which trip created more memories in your heart than in your camera?</span>
+        <textarea id="q5" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q6. તમારી એક ખરાબ આદત જે તમને છોડવી હોય પણ દૂર ન થતી હોય?</span>
+        <span class="field-q-en">What is one bad habit you want to quit but still cannot?</span>
+        <textarea id="q6" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+    </div>
+
+    <!-- STEP 4 -->
+    <div class="step-card" id="step4" style="display:none">
+      <div class="step-label">Step 4 of 6</div>
+      <h2 class="step-title">Social Work & Self</h2>
+      <p class="step-title-gu">સામાજિક કાર્ય અને સ્વ-પરિચય</p>
+      <div class="divider"></div>
+      <div class="field-group">
+        <span class="field-q-gu">Q7. અત્યાર સુધી માં તમે કરેલા સમાજ લક્ષી કામો ની ટૂંકી માહિતી આપો!</span>
+        <span class="field-q-en">Give short information about social/community work you have done.</span>
+        <textarea id="q7" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q8. તમારા જીવન માં ઉપયોગી થાય એવા કયા કૌશલ્યો તમે શીખ્યા છો?</span>
+        <span class="field-q-en">Which useful life skills have you learned?</span>
+        <textarea id="q8" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q9. આજથી 7 વર્ષ પછી તમે પોતાની જાત ને ક્યાં જુવો છો?</span>
+        <span class="field-q-en">Where do you see yourself after 7 years?</span>
+        <textarea id="q9" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q10. 2 વાક્ય માં તમે પોતાને કેવી રીતે introduce કરશો?</span>
+        <span class="field-q-en">How would you introduce yourself in 2 sentences?</span>
+        <textarea id="q10" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+    </div>
+
+    <!-- STEP 5 -->
+    <div class="step-card" id="step5" style="display:none">
+      <div class="step-label">Step 5 of 6</div>
+      <h2 class="step-title">Creative & Reflective</h2>
+      <p class="step-title-gu">સર્જનાત્મક અને ચિંતન</p>
+      <div class="divider"></div>
+      <div class="field-group">
+        <span class="field-q-gu">Q11. તમારા જીવન ની 3 games કે જે તમારી જૂની યાદો ને તાજા કરે છે</span>
+        <span class="field-q-en">Name 3 games that refresh your old memories.</span>
+        <textarea id="q11" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q12. જો તમારું જીવન એક movie હોય તો તમે તેને શું નામ આપશો?</span>
+        <span class="field-q-en">If your life were a movie, what would its title be?</span>
+        <textarea id="q12" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q13. આ પ્રોગ્રામ દરમિયાન તમે કયા ડર અથવા comfort zone માંથી બહાર આવવા માંગો છો?</span>
+        <span class="field-q-en">Which fear or comfort zone do you want to overcome during this program?</span>
+        <textarea id="q13" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q14. તમારા વ્યક્તિત્વને કુદરતના કયા તત્વ સાથે સરખાવશો — પવન, અગ્નિ, પાણી કે પથ્થર?</span>
+        <span class="field-q-en">Which natural element best represents your personality and why?</span>
+        <textarea id="q14" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q15. જો 15 વર્ષ પહેલાં કોરોના જેવી મહામારી આવી હોત — smartphone વિના — તો તમે દિવસ કેવી રીતે પસાર કરશો?</span>
+        <span class="field-q-en">If a pandemic like Corona had happened 15 years ago without smartphones, how would you spend your days?</span>
+        <textarea id="q15" oninput="autoResize(this)" placeholder="Type your answer…"></textarea>
+      </div>
+    </div>
+
+    <!-- STEP 6 MCQ -->
+    <div class="step-card" id="step6" style="display:none">
+      <div class="step-label">Step 6 of 6</div>
+      <h2 class="step-title">Quick Choices</h2>
+      <p class="step-title-gu">MCQ પ્રશ્નો</p>
+      <div class="divider"></div>
+
+      <div class="field-group">
+        <span class="field-q-gu">Q16. New smartphone વાપરતી વખતે શીખવાની રીત?</span>
+        <span class="field-q-en">Learning style while using a new smartphone:</span>
+        <div class="mcq-options" id="mcq16">
+          <label class="mcq-option" onclick="selectMCQ('mcq16',this)"><input type="radio" name="mcq16" value="A"><div class="mcq-dot"></div><span class="mcq-text">A) Visual — diagrams &amp; charts</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq16',this)"><input type="radio" name="mcq16" value="B"><div class="mcq-dot"></div><span class="mcq-text">B) Videos &amp; listening</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq16',this)"><input type="radio" name="mcq16" value="C"><div class="mcq-dot"></div><span class="mcq-text">C) Reading instruction manual</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq16',this)"><input type="radio" name="mcq16" value="D"><div class="mcq-dot"></div><span class="mcq-text">D) Experimenting practically</span></label>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q17. Team conflict થાય ત્યારે?</span>
+        <span class="field-q-en">When conflict happens in a team:</span>
+        <div class="mcq-options" id="mcq17">
+          <label class="mcq-option" onclick="selectMCQ('mcq17',this)"><input type="radio" name="mcq17" value="A"><div class="mcq-dot"></div><span class="mcq-text">A) Defend my ideas strongly</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq17',this)"><input type="radio" name="mcq17" value="B"><div class="mcq-dot"></div><span class="mcq-text">B) Find a balanced solution</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq17',this)"><input type="radio" name="mcq17" value="C"><div class="mcq-dot"></div><span class="mcq-text">C) Step back &amp; accept majority</span></label>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q18. લોકોમાં સૌથી વધુ ગમતી ગુણ?</span>
+        <span class="field-q-en">Which quality do you admire most in people?</span>
+        <div class="mcq-options" id="mcq18">
+          <label class="mcq-option" onclick="selectMCQ('mcq18',this)"><input type="radio" name="mcq18" value="A"><div class="mcq-dot"></div><span class="mcq-text">A) Honesty</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq18',this)"><input type="radio" name="mcq18" value="B"><div class="mcq-dot"></div><span class="mcq-text">B) Humor</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq18',this)"><input type="radio" name="mcq18" value="C"><div class="mcq-dot"></div><span class="mcq-text">C) Kindness</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq18',this)"><input type="radio" name="mcq18" value="D"><div class="mcq-dot"></div><span class="mcq-text">D) Confidence</span></label>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q19. નિષ્ફળતા પછી તમે શું કરો?</span>
+        <span class="field-q-en">What do you do after failure?</span>
+        <div class="mcq-options" id="mcq19">
+          <label class="mcq-option" onclick="selectMCQ('mcq19',this)"><input type="radio" name="mcq19" value="A"><div class="mcq-dot"></div><span class="mcq-text">A) Try again</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq19',this)"><input type="radio" name="mcq19" value="B"><div class="mcq-dot"></div><span class="mcq-text">B) Learn from mistakes</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq19',this)"><input type="radio" name="mcq19" value="C"><div class="mcq-dot"></div><span class="mcq-text">C) Take rest for some time</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq19',this)"><input type="radio" name="mcq19" value="D"><div class="mcq-dot"></div><span class="mcq-text">D) Ask others for advice</span></label>
+        </div>
+      </div>
+      <div class="field-group">
+        <span class="field-q-gu">Q20. Trip/Program પછી સૌથી વધારે શું લઈ જવા ઇચ્છો?</span>
+        <span class="field-q-en">After the trip/program, what do you want to take back?</span>
+        <div class="mcq-options" id="mcq20">
+          <label class="mcq-option" onclick="selectMCQ('mcq20',this)"><input type="radio" name="mcq20" value="A"><div class="mcq-dot"></div><span class="mcq-text">A) Photos</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq20',this)"><input type="radio" name="mcq20" value="B"><div class="mcq-dot"></div><span class="mcq-text">B) Memories</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq20',this)"><input type="radio" name="mcq20" value="C"><div class="mcq-dot"></div><span class="mcq-text">C) Confidence</span></label>
+          <label class="mcq-option" onclick="selectMCQ('mcq20',this)"><input type="radio" name="mcq20" value="D"><div class="mcq-dot"></div><span class="mcq-text">D) Changed mindset</span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-bar" id="bottomBar">
+    <button class="btn-secondary" id="prevBtn" onclick="prevStep()" style="display:none">← Back</button>
+    <button class="btn-primary" id="nextBtn" onclick="nextStep()">Next Step →</button>
+  </div>
+</div>
+
+<!-- ADMIN LOGIN -->
+<div id="adminLogin">
+  <div class="login-card">
+    <div class="login-logo">ADSN <span>Admin</span></div>
+    <p class="login-sub">Restricted Access — Authorized Personnel Only</p>
+    <label class="login-label">Password</label>
+    <input type="password" id="adminPass" placeholder="Enter admin password" style="margin-bottom:20px" onkeydown="if(event.key==='Enter')doAdminLogin()" />
+    <button class="btn-primary" onclick="doAdminLogin()">Login to Dashboard →</button>
+    <button class="btn-secondary" onclick="showForm()" style="width:100%;margin-top:10px">← Back to Form</button>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div id="adminPanel">
+  <div class="admin-header">
+    <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(200,134,10,0.18);border:1px solid rgba(200,134,10,0.35);color:#f0a832;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;padding:6px 14px;border-radius:100px;margin-bottom:12px">⚙ Admin Dashboard</div>
+    <div class="admin-title">ADSN <span>Research</span> Panel</div>
+    <div class="admin-subtitle">Personality Research Analytics 2026</div>
+  </div>
+  <div class="admin-body">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-label">Total</div><div class="kpi-value gold" id="kpiTotal">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Today</div><div class="kpi-value" id="kpiToday">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Completed</div><div class="kpi-value" id="kpiCompleted">—</div></div>
+      <div class="kpi-card"><div class="kpi-label">Processing</div><div class="kpi-value" id="kpiProcessing">—</div></div>
+    </div>
+    <button class="csv-btn" onclick="exportCSV()">📥 Download Full Data CSV</button>
+    <div class="admin-tabs">
+      <button class="tab-btn active" onclick="switchTab('responses',this)">📋 Responses</button>
+      <button class="tab-btn" onclick="switchTab('charts',this)">📊 MCQ Charts</button>
+      <button class="tab-btn" onclick="switchTab('database',this)">🗄️ Full Database</button>
+    </div>
+    <input class="search-bar" id="searchBar" placeholder="🔍 Search by name, email, course, college, mobile…" oninput="filterResponses()" />
+    <div id="tab-responses">
+      <div class="section-title">All Submissions <span>📋</span></div>
+      <div id="responsesList"></div>
+    </div>
+    <div id="tab-charts" style="display:none">
+      <div class="section-title">MCQ Analytics <span>📊</span></div>
+      <div class="chart-card"><div class="chart-title">Q16 — Learning Style while using new smartphone</div><canvas id="chart16" height="220"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Q17 — Team Conflict Response</div><canvas id="chart17" height="220"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Q18 — Most Admired Quality in People</div><canvas id="chart18" height="220"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Q19 — Behavior After Failure</div><canvas id="chart19" height="220"></canvas></div>
+      <div class="chart-card"><div class="chart-title">Q20 — What to Take Back from Program</div><canvas id="chart20" height="220"></canvas></div>
+    </div>
+    <div id="tab-database" style="display:none">
+      <div class="section-title">Full Database <span>🗄️</span></div>
+      <div class="db-table-wrap">
+        <div id="dbTableContainer"></div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="adminLogout()">🚪 Logout</button>
+  </div>
+</div>
+
+<script>
+const SUPA_URL = 'https://obtkvwddcqykutingjsm.supabase.co';
+const SUPA_KEY = 'sb_publishable_516_0R4-uqDlSVGnk_X6Cw_oJAxiCf-';
+const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+let currentStep = 1;
+let allResponses = [];
+let charts = {};
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show ' + type;
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 3200);
+}
+function setLoader(on) { document.getElementById('loader').classList.toggle('show', on); }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; }
+function selectMCQ(group, el) {
+  document.querySelectorAll('#' + group + ' .mcq-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+function updatePills(step) {
+  document.querySelectorAll('.pill').forEach((p, i) => {
+    p.classList.remove('active','done');
+    if (i + 1 === step) p.classList.add('active');
+    else if (i + 1 < step) p.classList.add('done');
+  });
+}
+function validateStep(step) {
+  if (step === 1) {
+    const req = [['f_name','Name'],['f_email','Email'],['f_mobile','Mobile'],['f_course','Course'],['f_semester','Semester'],['f_college','College']];
+    for (const [id, label] of req) {
+      if (!document.getElementById(id).value.trim()) { showToast('Please fill: ' + label, 'error'); document.getElementById(id).focus(); return false; }
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(document.getElementById('f_email').value.trim())) { showToast('Enter a valid email', 'error'); return false; }
+  }
+  return true;
+}
+function nextStep() {
+  if (!validateStep(currentStep)) return;
+  if (currentStep < 6) {
+    document.getElementById('step' + currentStep).style.display = 'none';
+    currentStep++;
+    document.getElementById('step' + currentStep).style.display = 'block';
+    updatePills(currentStep);
+    document.getElementById('prevBtn').style.display = 'block';
+    if (currentStep === 6) document.getElementById('nextBtn').textContent = 'Submit Form ✦';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  } else { submitForm(); }
+}
+function prevStep() {
+  if (currentStep > 1) {
+    document.getElementById('step' + currentStep).style.display = 'none';
+    currentStep--;
+    document.getElementById('step' + currentStep).style.display = 'block';
+    updatePills(currentStep);
+    if (currentStep === 1) document.getElementById('prevBtn').style.display = 'none';
+    document.getElementById('nextBtn').textContent = 'Next Step →';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+function getMCQ(group) {
+  const sel = document.querySelector('#' + group + ' .mcq-option.selected input');
+  return sel ? sel.value : null;
+}
+async function submitForm() {
+  const mcqs = ['mcq16','mcq17','mcq18','mcq19','mcq20'];
+  for (const m of mcqs) { if (!getMCQ(m)) { showToast('Please answer all MCQ questions', 'error'); return; } }
+  const email = document.getElementById('f_email').value.trim().toLowerCase();
+  setLoader(true);
+  try {
+    const { data: existing } = await db.from('adsn_responses').select('id').eq('email', email).maybeSingle();
+    if (existing) { showToast('This email already submitted the form!', 'error'); setLoader(false); return; }
+    const payload = {
+      name: document.getElementById('f_name').value.trim(), email,
+      mobile: document.getElementById('f_mobile').value.trim(),
+      course: document.getElementById('f_course').value.trim(),
+      semester: document.getElementById('f_semester').value,
+      college: document.getElementById('f_college').value.trim(),
+      hobbies: document.getElementById('f_hobbies').value.trim(),
+      q1: document.getElementById('q1').value.trim(), q2: document.getElementById('q2').value.trim(),
+      q3: document.getElementById('q3').value.trim(), q4: document.getElementById('q4').value.trim(),
+      q5: document.getElementById('q5').value.trim(), q6: document.getElementById('q6').value.trim(),
+      q7: document.getElementById('q7').value.trim(), q8: document.getElementById('q8').value.trim(),
+      q9: document.getElementById('q9').value.trim(), q10: document.getElementById('q10').value.trim(),
+      q11: document.getElementById('q11').value.trim(), q12: document.getElementById('q12').value.trim(),
+      q13: document.getElementById('q13').value.trim(), q14: document.getElementById('q14').value.trim(),
+      q15: document.getElementById('q15').value.trim(),
+      mcq16: getMCQ('mcq16'), mcq17: getMCQ('mcq17'), mcq18: getMCQ('mcq18'),
+      mcq19: getMCQ('mcq19'), mcq20: getMCQ('mcq20'),
+      status: 'completed', submitted_at: new Date().toISOString()
+    };
+    const { error } = await db.from('adsn_responses').insert([payload]);
+    if (error) throw error;
+    setLoader(false);
+    document.getElementById('step6').style.display = 'none';
+    document.getElementById('bottomBar').style.display = 'none';
+    document.getElementById('successScreen').style.display = 'block';
+    document.querySelector('.progress-wrap').style.display = 'none';
+    showToast('Submitted successfully!', 'success');
+  } catch(err) { setLoader(false); console.error(err); showToast('Submission failed. Try again.', 'error'); }
+}
+
+function showAdminLogin() { document.getElementById('formApp').style.display = 'none'; document.getElementById('adminLogin').style.display = 'flex'; document.getElementById('adminPanel').style.display = 'none'; }
+function showForm() { document.getElementById('formApp').style.display = 'block'; document.getElementById('adminLogin').style.display = 'none'; document.getElementById('adminPanel').style.display = 'none'; }
+async function doAdminLogin() {
+  const pass = document.getElementById('adminPass').value;
+  if (pass === 'Patel1901') {
+    document.getElementById('adminLogin').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+    document.getElementById('adminPass').value = '';
+    await loadAdminData();
+  } else { showToast('Incorrect password', 'error'); document.getElementById('adminPass').value = ''; }
+}
+function adminLogout() { document.getElementById('adminPanel').style.display = 'none'; document.getElementById('formApp').style.display = 'block'; showToast('Logged out'); }
+
+async function loadAdminData() {
+  setLoader(true);
+  try {
+    const { data, error } = await db.from('adsn_responses').select('*').order('submitted_at', { ascending: false });
+    if (error) throw error;
+    allResponses = data || [];
+    updateKPIs(); renderResponses(allResponses);
+  } catch(err) { console.error(err); showToast('Failed to load data — check Supabase table setup.', 'error'); }
+  setLoader(false);
+}
+function updateKPIs() {
+  document.getElementById('kpiTotal').textContent = allResponses.length;
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('kpiToday').textContent = allResponses.filter(r => r.submitted_at && r.submitted_at.startsWith(today)).length;
+  const comp = allResponses.filter(r => r.status === 'completed').length;
+  document.getElementById('kpiCompleted').textContent = comp;
+  document.getElementById('kpiProcessing').textContent = allResponses.length - comp;
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function renderResponses(list) {
+  const el = document.getElementById('responsesList');
+  if (!list.length) { el.innerHTML = '<div class="empty-state">No responses yet. Be the first! 🌟</div>'; return; }
+  el.innerHTML = list.map(r => `
+    <div class="response-card" id="card-${r.id}">
+      <div class="response-card-header">
+        <div>
+          <div class="response-name">${esc(r.name)}</div>
+          <div class="response-meta">${esc(r.email)} &bull; ${esc(r.mobile)}</div>
+          <div class="response-meta">${esc(r.course)} ${esc(r.semester)} &bull; ${esc(r.college)}</div>
+          <div class="response-meta">${r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-IN') : ''}</div>
+        </div>
+        <span class="response-badge">${esc(r.status||'completed')}</span>
+      </div>
+      <button class="delete-btn" onclick="deleteResponse('${r.id}')">🗑 Delete</button>
+    </div>
+  `).join('');
+}
+function filterResponses() {
+  const q = document.getElementById('searchBar').value.toLowerCase();
+  renderResponses(allResponses.filter(r =>
+    (r.name||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q) ||
+    (r.course||'').toLowerCase().includes(q) || (r.college||'').toLowerCase().includes(q) ||
+    (r.mobile||'').toLowerCase().includes(q)
+  ));
+}
+async function deleteResponse(id) {
+  if (!confirm('Delete this response permanently?')) return;
+  setLoader(true);
+  const { error } = await db.from('adsn_responses').delete().eq('id', id);
+  setLoader(false);
+  if (error) { showToast('Delete failed', 'error'); return; }
+  allResponses = allResponses.filter(r => r.id !== id);
+  updateKPIs(); filterResponses();
+  if (document.getElementById('tab-database').style.display !== 'none') renderDBTable(allResponses);
+  showToast('Entry deleted', 'success');
+}
+
+const MCQ_LABELS = {
+  chart16: ['Visual','Videos/Audio','Manual','Experiment'],
+  chart17: ['Defend ideas','Balanced solution','Accept majority'],
+  chart18: ['Honesty','Humor','Kindness','Confidence'],
+  chart19: ['Try again','Learn','Take rest','Ask others'],
+  chart20: ['Photos','Memories','Confidence','Changed mindset']
+};
+function renderCharts() {
+  ['16','17','18','19','20'].forEach(n => {
+    const key = 'chart' + n; const field = 'mcq' + n;
+    const labels = MCQ_LABELS[key];
+    const counts = new Array(labels.length).fill(0);
+    const opts = ['A','B','C','D'];
+    allResponses.forEach(r => { const i = opts.indexOf(r[field]); if (i !== -1) counts[i]++; });
+    const ctx = document.getElementById(key);
+    if (charts[key]) charts[key].destroy();
+    charts[key] = new Chart(ctx, {
+      type: 'bar',
+      data: { labels, datasets: [{ data: counts, backgroundColor: ['rgba(200,134,10,0.8)','rgba(240,168,50,0.7)','rgba(107,61,15,0.6)','rgba(200,134,10,0.4)'], borderRadius: 8, borderSkipped: false }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,0.04)' } }, x: { grid: { display: false }, ticks: { font: { size: 11 } } } } }
+    });
+  });
+}
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  document.getElementById('tab-responses').style.display = tab === 'responses' ? 'block' : 'none';
+  document.getElementById('tab-charts').style.display = tab === 'charts' ? 'block' : 'none';
+  document.getElementById('tab-database').style.display = tab === 'database' ? 'block' : 'none';
+  document.getElementById('searchBar').style.display = tab === 'responses' ? 'block' : 'none';
+  if (tab === 'charts') renderCharts();
+  if (tab === 'database') renderDBTable(allResponses);
+}
+
+const DB_COLS = [
+  { key: '#', label: '#' },
+  { key: 'name', label: 'Name' },
+  { key: 'email', label: 'Email' },
+  { key: 'mobile', label: 'Mobile' },
+  { key: 'course', label: 'Course' },
+  { key: 'semester', label: 'Sem' },
+  { key: 'college', label: 'College' },
+  { key: 'hobbies', label: 'Hobbies' },
+  { key: 'q1', label: 'Q1' },
+  { key: 'q2', label: 'Q2' },
+  { key: 'q3', label: 'Q3' },
+  { key: 'q4', label: 'Q4' },
+  { key: 'q5', label: 'Q5' },
+  { key: 'q6', label: 'Q6' },
+  { key: 'q7', label: 'Q7' },
+  { key: 'q8', label: 'Q8' },
+  { key: 'q9', label: 'Q9' },
+  { key: 'q10', label: 'Q10' },
+  { key: 'q11', label: 'Q11' },
+  { key: 'q12', label: 'Q12' },
+  { key: 'q13', label: 'Q13' },
+  { key: 'q14', label: 'Q14' },
+  { key: 'q15', label: 'Q15' },
+  { key: 'mcq16', label: 'Q16' },
+  { key: 'mcq17', label: 'Q17' },
+  { key: 'mcq18', label: 'Q18' },
+  { key: 'mcq19', label: 'Q19' },
+  { key: 'mcq20', label: 'Q20' },
+  { key: 'status', label: 'Status' },
+  { key: 'submitted_at', label: 'Submitted At' },
+  { key: '_del', label: 'Delete' }
+];
+
+function renderDBTable(list) {
+  const container = document.getElementById('dbTableContainer');
+  if (!list.length) {
+    container.innerHTML = '<div class="db-table-empty">No data in database yet. 📭</div>';
+    return;
+  }
+  const mcqKeys = ['mcq16','mcq17','mcq18','mcq19','mcq20'];
+  const wrapKeys = ['q1','q2','q3','q4','q5','q6','q7','q8','q9','q10','q11','q12','q13','q14','q15','hobbies','college','name'];
+  const thead = DB_COLS.map(c => `<th>${c.label}</th>`).join('');
+  const tbody = list.map((r, i) => {
+    const cells = DB_COLS.map(c => {
+      if (c.key === '#') return `<td class="row-num cell-nowrap">${i + 1}</td>`;
+      if (c.key === '_del') return `<td class="del-cell"><button onclick="deleteResponse('${r.id}');renderDBTable(allResponses)">🗑</button></td>`;
+      if (c.key === 'submitted_at') return `<td class="cell-nowrap">${r.submitted_at ? new Date(r.submitted_at).toLocaleString('en-IN') : '—'}</td>`;
+      if (mcqKeys.includes(c.key)) return `<td class="cell-mcq cell-nowrap">${esc(r[c.key] || '—')}</td>`;
+      if (wrapKeys.includes(c.key)) return `<td class="cell-wrap">${esc(r[c.key] || '—')}</td>`;
+      return `<td class="cell-nowrap">${esc(r[c.key] || '—')}</td>`;
+    }).join('');
+    return `<tr>${cells}</tr>`;
+  }).join('');
+  container.innerHTML = `
+    <div class="db-count-bar">
+      <span>Showing <strong>${list.length}</strong> record${list.length !== 1 ? 's' : ''}</span>
+      <span style="font-size:11px;color:var(--text-light)">← Scroll horizontally to see all columns →</span>
+    </div>
+    <table class="db-table">
+      <thead><tr>${thead}</tr></thead>
+      <tbody>${tbody}</tbody>
+    </table>`;
+}
+function exportCSV() {
+  if (!allResponses.length) { showToast('No data to export', 'error'); return; }
+  const h = ['name','email','mobile','course','semester','college','hobbies','q1','q2','q3','q4','q5','q6','q7','q8','q9','q10','q11','q12','q13','q14','q15','mcq16','mcq17','mcq18','mcq19','mcq20','status','submitted_at'];
+  const rows = allResponses.map(r => h.map(k => '"' + (r[k]||'').toString().replace(/"/g,'""') + '"').join(','));
+  const csv = [h.join(','), ...rows].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download = 'adsn_responses_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click(); showToast('CSV downloaded!', 'success');
+}
+
+updatePills(1);
+</script>
+
+<!-- SUPABASE SETUP SQL — open browser console to read -->
+<script>
+console.log(`
+ADSN Platform — Run this SQL in your Supabase SQL Editor to create the table:
+
+CREATE TABLE IF NOT EXISTS adsn_responses (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  name text, email text UNIQUE, mobile text, course text, semester text,
+  college text, hobbies text,
+  q1 text, q2 text, q3 text, q4 text, q5 text, q6 text, q7 text, q8 text,
+  q9 text, q10 text, q11 text, q12 text, q13 text, q14 text, q15 text,
+  mcq16 text, mcq17 text, mcq18 text, mcq19 text, mcq20 text,
+  status text DEFAULT 'completed',
+  submitted_at timestamptz DEFAULT now()
+);
+
+ALTER TABLE adsn_responses ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "anon_insert" ON adsn_responses FOR INSERT TO anon WITH CHECK (true);
+CREATE POLICY "anon_select" ON adsn_responses FOR SELECT TO anon USING (true);
+CREATE POLICY "anon_delete" ON adsn_responses FOR DELETE TO anon USING (true);
+`);
+</script>
+</body>
+</html>
